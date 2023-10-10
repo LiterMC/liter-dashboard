@@ -6,7 +6,7 @@ export interface APIResultBase {
   status: string
 }
 
-interface APIErrorI extends APIResultBase {
+export interface APIErrorI extends APIResultBase {
   type: string
   message: string | undefined
 }
@@ -263,7 +263,7 @@ export class Blacklist {
 }
 
 export class V1 {
-  private readonly token: string
+  private token: string
   protected readonly axios: AxiosInstance
   constructor(token: string) {
     this.token = token
@@ -276,15 +276,30 @@ export class V1 {
     })
   }
 
+  setToken(v: string) {
+    this.token = v
+  }
+
   async get<T>(
     path: string,
     config?: AxiosRequestConfig
   ): Promise<AxiosResponse<T & APIResultBase>> {
-    const res = await this.axios.get<APIResultBase>(path, config)
+    const res = await this.axios.get<APIResultBase>(path, config).catch((error) => {
+      const data = error.response.data
+      if (data && data.status) {
+        const err = data as APIErrorI
+        throw new APIError(err.status, err.type, err.message)
+      }
+      throw error
+    })
+    const data = res.data
     if (res.status !== 200) {
+      if (data && data.status) {
+        const err = data as APIErrorI
+        throw new APIError(err.status, err.type, err.message)
+      }
       throw res
     }
-    const data = res.data
     if (data.status === 'ok') {
       return res as AxiosResponse<T & APIResultBase>
     }

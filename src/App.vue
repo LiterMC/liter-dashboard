@@ -23,7 +23,17 @@ watch(token, (value) => {
     </nav>
   </header>
 
-  <RouterView />
+  <div id="body">
+    <RouterView v-slot="{ Component }">
+      <!-- https://vuejs.org/guide/built-ins/suspense.html#combining-with-other-components -->
+      <template v-if="Component">
+        <Suspense>
+          <component :is="Component"> </component>
+          <template #fallback> Loading... </template>
+        </Suspense>
+      </template>
+    </RouterView>
+  </div>
 </template>
 
 <style scoped></style>
