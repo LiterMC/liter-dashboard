@@ -12,7 +12,7 @@ app.use(router)
 const API_TOKEN_STORAGE_KEY = '__api_tk'
 
 const token: Ref<string | null> = ref(localStorage.getItem(API_TOKEN_STORAGE_KEY))
-const api = reactive(new V1(''))
+const api = reactive(new V1(token.value || ''))
 watch(token, (value) => {
 	if (value) {
 		api.setToken(value)

@@ -282,6 +282,7 @@ export class V1 {
 
 	setToken(v: string) {
 		this.token = v
+		this.axios.defaults.headers['X-Token'] = v
 	}
 
 	async get<T>(
@@ -313,10 +314,17 @@ export class V1 {
 
 	async post<T>(
 		path: string,
-		body: any,
+		body?: any,
 		config?: AxiosRequestConfig
 	): Promise<AxiosResponse<T & APIResultBase>> {
-		const res = await this.axios.post<APIResultBase>(path, body, config)
+		const res = await this.axios.post<APIResultBase>(path, body, config).catch((error) => {
+			const data = error.response.data
+			if (data && data.status) {
+				const err = data as APIErrorI
+				throw new APIError(err.status, err.type, err.message)
+			}
+			throw error
+		})
 		if (res.status !== 200) {
 			throw res
 		}
@@ -341,6 +349,14 @@ export class V1 {
 			}
 			throw e
 		}
+	}
+
+	async logout(): Promise<void> {
+		await this.post('/logout').catch((err) => {
+			// we don't care if logout success or not
+			console.error('Logout failed:', err)
+		})
+		this.setToken('')
 	}
 
 	async getConfig(): Promise<Config> {

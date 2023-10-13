@@ -1,18 +1,28 @@
 <script setup lang="ts">
-import { inject } from 'vue'
+import { inject, type Ref } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
 import { V1 } from './api/v1'
 
+const token = inject('token') as Ref<string | null>
 const api = inject('api') as V1
+
+async function logout() {
+	await api.logout()
+	token.value = ''
+}
 </script>
 
 <template>
-	<header>
+	<header class="header">
 		<nav>
 			<RouterLink to="/">Home</RouterLink>
-			| <RouterLink to="/login">Login</RouterLink>
-			<template v-if="api.logged"> | <RouterLink to="/settings">Settings</RouterLink> </template>
+			<template v-if="api.logged">
+				| <RouterLink to="/settings">Settings</RouterLink> |
+				<RouterLink to="/login" @click="logout()">Logout</RouterLink>
+			</template>
+			<template v-else> | <RouterLink to="/login">Login</RouterLink> </template>
 		</nav>
+		<hr />
 	</header>
 
 	<div id="body">
@@ -28,4 +38,8 @@ const api = inject('api') as V1
 	</div>
 </template>
 
-<style scoped></style>
+<style scoped>
+.header {
+	margin-bottom: 1rem;
+}
+</style>

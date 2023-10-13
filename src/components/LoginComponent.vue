@@ -3,7 +3,7 @@ import { inject, ref, type Ref } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { sha256 } from 'js-sha256'
-import { type APIResultBase, type APIErrorI } from '@/api/v1'
+import { V1, type APIResultBase, type APIErrorI } from '@/api/v1'
 
 const emit = defineEmits<{
 	logged: [token: string]
@@ -15,12 +15,24 @@ const username = ref('')
 const password = ref('')
 
 const token = inject('token') as Ref<string>
+const api = inject('api') as V1
 
-async function login() {
+async function login(): Promise<void> {
+	const user = username.value
+	const passwd = sha256(password.value)
+	if (!user) {
+		alert('Please input the username')
+		return
+	}
+	if (!passwd) {
+		alert('Please input the password')
+		return
+	}
+	password.value = ''
 	const res = await axios
 		.post<APIResultBase>(`/api/v1/login`, {
-			username: username.value,
-			password: sha256(password.value)
+			username: user,
+			password: passwd
 		})
 		.catch((err) => {
 			const data = err.response.data
@@ -49,10 +61,24 @@ async function login() {
 	<div class="login">
 		<form @submit.prevent="login">
 			<div>
-				<input type="text" name="username" autocomplete="username" v-model="username" />
+				<label for="username"> Username </label>
+				<input
+					type="text"
+					name="username"
+					autocomplete="username"
+					placeholder="username"
+					v-model="username"
+				/>
 			</div>
 			<div>
-				<input type="password" name="password" autocomplete="password" v-model="password" />
+				<label for="password"> Password </label>
+				<input
+					type="password"
+					name="password"
+					autocomplete="password"
+					placeholder="password"
+					v-model="password"
+				/>
 			</div>
 			<div>
 				<input type="submit" value="Login" />
@@ -61,4 +87,15 @@ async function login() {
 	</div>
 </template>
 
-<style scoped></style>
+<style scoped>
+form > div {
+	margin-top: 0.3rem;
+}
+
+form > div > input {
+	height: 2rem;
+	padding: 0.5rem;
+	margin-left: 0.5rem;
+	border-radius: 1rem;
+}
+</style>
