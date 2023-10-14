@@ -160,21 +160,32 @@ onMounted(async () => {
 				<h4>Players: count={{ whitelist.players.length }}</h4>
 				<ul>
 					<li v-for="(p, i) in whitelist.players" :key="p.id">
-						{{ p.name }}
-						<span v-if="p.isOffline">
-							<i>(offline player)</i>
-						</span>
-						<span v-else> ({{ p.id }}) </span>
-						<button
-							:disabled="pending"
-							@click="pend() && whitelist.removePlayer(i).catch(alert).then(refresh)"
-						>
-							-
-						</button>
+						<div class="player-item">
+							<img
+								class="player-head"
+								:src="`/api/v1/player/${p.id}/head`"
+								:alt="`Head of ${p.name}`"
+							/>
+							<span class="player-name">
+								{{ p.name }}
+							</span>
+							<span v-if="p.isOffline">
+								<i>(offline player)</i>
+							</span>
+							<span v-else class="player-uuid">
+								{{ p.id }}
+							</span>
+							<button
+								:disabled="pending"
+								@click="pend() && whitelist.removePlayer(i).catch(alert).then(refresh)"
+							>
+								-
+							</button>
+						</div>
 					</li>
 					<li>
 						<form @submit.prevent="whitelistAddPlayer">
-							<input type="text" name="player" />
+							<input type="text" name="player" placeholder="player name or uuid" />
 							<input type="submit" value="Add" :disabled="pending" />
 						</form>
 					</li>
@@ -190,18 +201,30 @@ onMounted(async () => {
 				<h4>Players: count={{ blacklist.players.length }}</h4>
 				<ul>
 					<li v-for="(p, i) in blacklist.players" :key="p.id">
-						{{ p.name }}
-						<span v-if="p.isOffline"><i>(offline player)</i></span>
-						<button
-							:disabled="pending"
-							@click="pend() && blacklist.removePlayer(i).catch(alert).then(refresh)"
-						>
-							-
-						</button>
+						<div class="player-item">
+							<img
+								class="player-head"
+								:src="`/api/v1/player/${p.id}/head`"
+								:alt="`Head of ${p.name}`"
+							/>
+							<span class="player-name">
+								{{ p.name }}
+							</span>
+							<span v-if="p.isOffline"><i>(offline player)</i></span>
+							<span v-else class="player-uuid">
+								{{ p.id }}
+							</span>
+							<button
+								:disabled="pending"
+								@click="pend() && blacklist.removePlayer(i).catch(alert).then(refresh)"
+							>
+								-
+							</button>
+						</div>
 					</li>
 					<li>
 						<form @submit.prevent="blacklistAddPlayer">
-							<input type="text" name="player" />
+							<input type="text" name="player" placeholder="player name or uuid" />
 							<input type="submit" value="Add" :disabled="pending" />
 						</form>
 					</li>
@@ -222,6 +245,38 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.player-item {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	height: 1.5rem;
+}
+
+.player-head {
+	width: 1rem;
+	height: 1rem;
+	image-rendering: pixelated;
+	margin-right: 0.4rem;
+}
+
+.player-name {
+	user-select: all;
+}
+
+.player-uuid {
+	user-select: all;
+}
+
+.player-uuid::before {
+	content: '(';
+	user-select: none;
+}
+
+.player-uuid::after {
+	content: ')';
+	user-select: none;
+}
+
 .login-pop {
 	position: fixed;
 	width: 100vw;
