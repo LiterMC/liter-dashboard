@@ -22,7 +22,6 @@ async function logout() {
 			</template>
 			<template v-else> | <RouterLink to="/login">Login</RouterLink> </template>
 		</nav>
-		<hr />
 	</header>
 
 	<div id="body">
@@ -40,6 +39,19 @@ async function logout() {
 
 <style scoped>
 .header {
+	height: 2rem;
 	margin-bottom: 1rem;
+	border-bottom: 1px solid #777;
+}
+
+.header * {
+	transition: 0.5s all ease;
+}
+
+.router-link-active {
+	color: #000;
+	font-size: 1.1rem;
+	font-weight: 600;
+	text-decoration: none;
 }
 </style>

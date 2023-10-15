@@ -1,4 +1,5 @@
 import './assets/main.css'
+import './assets/minecraft-font.css'
 
 import { createApp, ref, reactive, watch, type Ref } from 'vue'
 import App from './App.vue'

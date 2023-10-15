@@ -3,6 +3,7 @@ import { inject, ref, onMounted, type Ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { V1, Config, Whitelist, Blacklist } from '@/api/v1'
 import LoginComponent from '@/components/LoginComponent.vue'
+import PlayerItem from '@/components/PlayerItem.vue'
 
 const router = useRouter()
 
@@ -107,11 +108,13 @@ onMounted(async () => {
 		<div>
 			<button :disabled="pending" @click="pend() && refresh()">Refresh</button>
 		</div>
-		<div class="config">
-			<h3><b>Config:</b></h3>
+		<fieldset class="config config-box">
+			<legend class="config-box-title">
+				<h3>Config</h3>
+			</legend>
 			<div v-if="config">
 				<div>
-					<b>Online Mode:</b>
+					<b>Online Mode:&nbsp;</b>
 					<input
 						type="checkbox"
 						:disabled="pending"
@@ -123,7 +126,7 @@ onMounted(async () => {
 					/>
 				</div>
 				<div>
-					<b>Enable Whitelist:</b>
+					<b>Enable Whitelist:&nbsp;</b>
 					<input
 						type="checkbox"
 						:disabled="pending"
@@ -136,7 +139,7 @@ onMounted(async () => {
 					/>
 				</div>
 				<div>
-					<b>Enable IPWhitelist:</b>
+					<b>Enable IPWhitelist:&nbsp;</b>
 					<input
 						type="checkbox"
 						:disabled="pending"
@@ -153,87 +156,77 @@ onMounted(async () => {
 				</div>
 			</div>
 			<div v-else>Loading...</div>
-		</div>
-		<div class="whitelist">
-			<h3><b>Whitelist:</b></h3>
-			<div v-if="whitelist">
-				<h4>Players: count={{ whitelist.players.length }}</h4>
-				<ul>
-					<li v-for="(p, i) in whitelist.players" :key="p.id">
-						<div class="player-item">
-							<img
-								class="player-head"
-								:src="`/api/v1/player/${p.id}/head`"
-								:alt="`Head of ${p.name}`"
-							/>
-							<span class="player-name">
-								{{ p.name }}
-							</span>
-							<span v-if="p.isOffline">
-								<i>(offline player)</i>
-							</span>
-							<span v-else class="player-uuid">
-								{{ p.id }}
-							</span>
-							<button
-								:disabled="pending"
-								@click="pend() && whitelist.removePlayer(i).catch(alert).then(refresh)"
-							>
+		</fieldset>
+		<fieldset class="whitelist config-box">
+			<legend class="config-box-title">
+				<h3>Whitelist</h3>
+			</legend>
+			<template v-if="whitelist">
+				<fieldset class="sub-config-box" :disabled="pending">
+					<legend>
+						<h4 style="display: inline; font-weight: 600">Players</h4>
+						<span style="font-size: 0.8rem">
+							&nbsp;&nbsp; count = {{ whitelist.players.length }}
+						</span>
+					</legend>
+					<div class="player-list">
+						<PlayerItem v-for="(p, i) in whitelist.players" :key="p.id" :name="p.name" :id="p.id">
+							<button @click="pend() && whitelist.removePlayer(i).catch(alert).then(refresh)">
 								-
 							</button>
-						</div>
-					</li>
-					<li>
-						<form @submit.prevent="whitelistAddPlayer">
-							<input type="text" name="player" placeholder="player name or uuid" />
-							<input type="submit" value="Add" :disabled="pending" />
+						</PlayerItem>
+						<form class="form-add-player" @submit.prevent="whitelistAddPlayer">
+							<input
+								type="text"
+								name="player"
+								class="input-player"
+								placeholder="Player name or UUID"
+								autocomplete="off"
+							/>
+							<input type="submit" value="Add" />
 						</form>
-					</li>
-				</ul>
-			</div>
+					</div>
+				</fieldset>
+			</template>
 			<div v-else>
 				<i><b>Loading...</b></i>
 			</div>
-		</div>
-		<div class="blacklist">
-			<h3><b>Blacklist:</b></h3>
-			<div v-if="blacklist">
-				<h4>Players: count={{ blacklist.players.length }}</h4>
-				<ul>
-					<li v-for="(p, i) in blacklist.players" :key="p.id">
-						<div class="player-item">
-							<img
-								class="player-head"
-								:src="`/api/v1/player/${p.id}/head`"
-								:alt="`Head of ${p.name}`"
-							/>
-							<span class="player-name">
-								{{ p.name }}
-							</span>
-							<span v-if="p.isOffline"><i>(offline player)</i></span>
-							<span v-else class="player-uuid">
-								{{ p.id }}
-							</span>
-							<button
-								:disabled="pending"
-								@click="pend() && blacklist.removePlayer(i).catch(alert).then(refresh)"
-							>
+		</fieldset>
+		<fieldset class="blacklist config-box">
+			<legend class="config-box-title">
+				<h3>Blacklist</h3>
+			</legend>
+			<template v-if="blacklist">
+				<fieldset class="sub-config-box" :disabled="pending">
+					<legend>
+						<h4 style="display: inline; font-weight: 600">Players</h4>
+						<span style="font-size: 0.8rem">
+							&nbsp;&nbsp; count = {{ blacklist.players.length }}
+						</span>
+					</legend>
+					<div class="player-list">
+						<PlayerItem v-for="(p, i) in blacklist.players" :key="p.id" :name="p.name" :id="p.id">
+							<button @click="pend() && blacklist.removePlayer(i).catch(alert).then(refresh)">
 								-
 							</button>
-						</div>
-					</li>
-					<li>
-						<form @submit.prevent="blacklistAddPlayer">
-							<input type="text" name="player" placeholder="player name or uuid" />
-							<input type="submit" value="Add" :disabled="pending" />
+						</PlayerItem>
+						<form class="form-add-player" @submit.prevent="blacklistAddPlayer">
+							<input
+								type="text"
+								name="player"
+								class="input-player"
+								placeholder="Player name or UUID"
+								autocomplete="off"
+							/>
+							<input type="submit" value="Add" />
 						</form>
-					</li>
-				</ul>
-			</div>
+					</div>
+				</fieldset>
+			</template>
 			<div v-else>
 				<i><b>Loading...</b></i>
 			</div>
-		</div>
+		</fieldset>
 		<div v-if="onlogged" class="login-pop">
 			<div class="login-box">
 				<h3>Token was expired, please login again</h3>
@@ -245,36 +238,73 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.player-item {
+.config-box {
+	margin: 1rem 0;
+	padding: 1rem;
+	border-right: none;
+	border-bottom: none;
+	border-radius: 0.5rem;
+	box-shadow: 0 0 1rem #0004;
+	background: #eee;
+}
+
+.config-box-title > h3 {
+	font-size: 1.2rem;
+	font-weight: 700;
+	font-family: Minecraftia, monospace;
+}
+
+.config {
+	font-family: Minecraftia, monospace;
+}
+
+.config,
+.whitelist,
+.blacklist {
+	width: 41rem;
+}
+
+.sub-config-box {
+	padding-right: 0;
+	border: none;
+	border-top: 0.1rem solid #000a;
+	background: inherit;
+}
+
+.player-list {
 	display: flex;
-	flex-direction: row;
-	align-items: center;
-	height: 1.5rem;
+	flex-direction: column;
+	width: 100%;
 }
 
-.player-head {
-	width: 1rem;
-	height: 1rem;
-	image-rendering: pixelated;
-	margin-right: 0.4rem;
+.form-add-player {
+	margin-top: 0.5rem;
 }
 
-.player-name {
-	user-select: all;
+.form-add-player input {
+	font-size: 0.8rem;
+	font-weight: 600;
+	font-family: Minecraftia, monospace;
 }
 
-.player-uuid {
-	user-select: all;
+.input-player {
+	height: 2rem;
+	width: 29.5rem;
+	padding: 0 0.5rem 0 2.2rem;
+	border: none;
+	border-bottom: 0.1rem solid #777;
 }
 
-.player-uuid::before {
-	content: '(';
-	user-select: none;
+.input-player:focus {
+	outline: none;
 }
 
-.player-uuid::after {
-	content: ')';
-	user-select: none;
+.form-add-player > input[type='submit'] {
+	margin-left: 1rem;
+	height: 2rem;
+	width: 7rem;
+	background: #77fb43;
+	cursor: pointer;
 }
 
 .login-pop {

@@ -51,62 +51,65 @@ async function changepasswd(event: Event): Promise<void> {
 <template>
 	<div class="settings">
 		<form class="changepasswd" @submit.prevent="changepasswd">
-			<h3>Change Password</h3>
-			<hr />
-			<input type="text" name="username" autocomplete="username" style="display: none" />
-			<div>
-				<label for="settings-changepasswd-old-password">
-					<b>Old password</b>
-				</label>
-				<input
-					type="password"
-					id="settings-changepasswd-old-password"
-					name="oldpasswd"
-					autocomplete="password"
-					placeholder="Old password"
-				/>
-			</div>
-			<div>
-				<label for="settings-changepasswd-new-password">
-					<b>New password</b>
-				</label>
-				<input
-					type="password"
-					id="settings-changepasswd-new-password"
-					name="newpasswd"
-					autocomplete="new-password"
-					placeholder="New password"
-				/>
-			</div>
-			<div>
-				<label for="settings-changepasswd-new-password-confirm">
-					<b>Confirm New password</b>
-				</label>
-				<input
-					type="password"
-					id="settings-changepasswd-new-password-confirm"
-					name="newpasswd-confirm"
-					autocomplete="new-password"
-					placeholder="Confirm new password"
-				/>
-			</div>
-			<div>
-				<input type="submit" value="Submit" />
-			</div>
+			<fieldset>
+				<legend>
+					<h3>Change Password</h3>
+				</legend>
+				<input type="text" name="username" autocomplete="username" style="display: none" />
+				<div>
+					<label for="settings-changepasswd-old-password">
+						<b>Old password</b>
+					</label>
+					<input
+						type="password"
+						id="settings-changepasswd-old-password"
+						name="oldpasswd"
+						autocomplete="password"
+						placeholder="Old password"
+					/>
+				</div>
+				<div>
+					<label for="settings-changepasswd-new-password">
+						<b>New password</b>
+					</label>
+					<input
+						type="password"
+						id="settings-changepasswd-new-password"
+						name="newpasswd"
+						autocomplete="new-password"
+						placeholder="New password"
+					/>
+				</div>
+				<div>
+					<label for="settings-changepasswd-new-password-confirm">
+						<b>Confirm New password</b>
+					</label>
+					<input
+						type="password"
+						id="settings-changepasswd-new-password-confirm"
+						name="newpasswd-confirm"
+						autocomplete="new-password"
+						placeholder="Confirm new password"
+					/>
+				</div>
+				<div>
+					<input type="submit" value="Submit" />
+				</div>
+			</fieldset>
 		</form>
 	</div>
 </template>
 
 <style scoped>
-form > h3 {
-	font-weight: 600;
+h3 {
+	font-weight: 700;
 }
 
-form > div {
+form > fieldset > div {
 	margin-top: 0.3rem;
 }
 
-form > div > input {
+form > fieldset > div > input {
 	height: 2rem;
 	padding: 0.5rem;
 	margin-left: 0.5rem;
