@@ -23,6 +23,128 @@ export class APIError extends Error {
 	}
 }
 
+export class V1 {
+	private token: string
+	protected readonly axios: AxiosInstance
+	constructor(token: string) {
+		this.token = token
+		this.axios = axios.create({
+			baseURL: V1_BASE.toString(),
+			timeout: 10000,
+			headers: {
+				'X-Token': this.token
+			}
+		})
+	}
+
+	get logged(): boolean {
+		return !!this.token
+	}
+
+	setToken(v: string) {
+		this.token = v
+		this.axios.defaults.headers['X-Token'] = v
+	}
+
+	async get<T>(
+		path: string,
+		config?: AxiosRequestConfig
+	): Promise<AxiosResponse<T & APIResultBase>> {
+		const res = await this.axios.get<APIResultBase>(path, config).catch((error) => {
+			if (error.response && error.response.data && error.response.data.status) {
+				const err = error.response.data as APIErrorI
+				throw new APIError(err.status, err.type, err.message)
+			}
+			throw error
+		})
+		const data = res.data
+		if (res.status !== 200) {
+			if (data && data.status) {
+				const err = data as APIErrorI
+				throw new APIError(err.status, err.type, err.message)
+			}
+			throw res
+		}
+		if (data.status === 'ok') {
+			return res as AxiosResponse<T & APIResultBase>
+		}
+		const err = data as APIErrorI
+		throw new APIError(err.status, err.type, err.message)
+	}
+
+	async post<T>(
+		path: string,
+		body?: any,
+		config?: AxiosRequestConfig
+	): Promise<AxiosResponse<T & APIResultBase>> {
+		const res = await this.axios.post<APIResultBase>(path, body, config).catch((error) => {
+			if (error.response && error.response.data && error.response.data.status) {
+				const err = error.response.data as APIErrorI
+				throw new APIError(err.status, err.type, err.message)
+			}
+			throw error
+		})
+		if (res.status !== 200) {
+			throw res
+		}
+		const data = res.data
+		if (data.status === 'ok') {
+			return res as AxiosResponse<T & APIResultBase>
+		}
+		const err = data as APIErrorI
+		throw new APIError(err.status, err.type, err.message)
+	}
+
+	async verify(): Promise<boolean> {
+		if (!this.token) {
+			return false
+		}
+		try {
+			await this.get('/verify')
+			return true
+		} catch (e) {
+			if (e instanceof APIError) {
+				return false
+			}
+			throw e
+		}
+	}
+
+	async logout(): Promise<void> {
+		await this.post('/logout').catch((err) => {
+			// we don't care if logout success or not
+			console.error('Logout failed:', err)
+		})
+		this.setToken('')
+	}
+
+	async getConfig(): Promise<Config> {
+		const res = await this.get<ConfigI>('/config')
+		return new Config(this, res, res.data)
+	}
+
+	async getWhitelist(): Promise<Whitelist> {
+		const res = await this.get<{
+			data: WhitelistI
+		}>('/whitelist')
+		return new Whitelist(this, res, res.data.data)
+	}
+
+	async getBlacklist(): Promise<Blacklist> {
+		const res = await this.get<{
+			data: BlacklistI
+		}>('/blacklist')
+		return new Blacklist(this, res, res.data.data)
+	}
+
+	async getConnections(): Promise<Connection[]> {
+		const res = await this.get<{
+			data: ConnectionI[]
+		}>('/conns')
+		return res.data.data.map((v) => new Connection(v))
+	}
+}
+
 interface PlayerInfoI {
 	name: string
 	id: string
@@ -262,119 +384,22 @@ export class Blacklist {
 	}
 }
 
-export class V1 {
-	private token: string
-	protected readonly axios: AxiosInstance
-	constructor(token: string) {
-		this.token = token
-		this.axios = axios.create({
-			baseURL: V1_BASE.toString(),
-			timeout: 10000,
-			headers: {
-				'X-Token': this.token
-			}
-		})
-	}
+interface ConnectionI {
+	id: number
+	addr: string
+	when: number
+	player?: PlayerInfoI
+}
 
-	get logged(): boolean {
-		return !!this.token
-	}
-
-	setToken(v: string) {
-		this.token = v
-		this.axios.defaults.headers['X-Token'] = v
-	}
-
-	async get<T>(
-		path: string,
-		config?: AxiosRequestConfig
-	): Promise<AxiosResponse<T & APIResultBase>> {
-		const res = await this.axios.get<APIResultBase>(path, config).catch((error) => {
-			const data = error.response.data
-			if (data && data.status) {
-				const err = data as APIErrorI
-				throw new APIError(err.status, err.type, err.message)
-			}
-			throw error
-		})
-		const data = res.data
-		if (res.status !== 200) {
-			if (data && data.status) {
-				const err = data as APIErrorI
-				throw new APIError(err.status, err.type, err.message)
-			}
-			throw res
-		}
-		if (data.status === 'ok') {
-			return res as AxiosResponse<T & APIResultBase>
-		}
-		const err = data as APIErrorI
-		throw new APIError(err.status, err.type, err.message)
-	}
-
-	async post<T>(
-		path: string,
-		body?: any,
-		config?: AxiosRequestConfig
-	): Promise<AxiosResponse<T & APIResultBase>> {
-		const res = await this.axios.post<APIResultBase>(path, body, config).catch((error) => {
-			const data = error.response.data
-			if (data && data.status) {
-				const err = data as APIErrorI
-				throw new APIError(err.status, err.type, err.message)
-			}
-			throw error
-		})
-		if (res.status !== 200) {
-			throw res
-		}
-		const data = res.data
-		if (data.status === 'ok') {
-			return res as AxiosResponse<T & APIResultBase>
-		}
-		const err = data as APIErrorI
-		throw new APIError(err.status, err.type, err.message)
-	}
-
-	async verify(): Promise<boolean> {
-		if (!this.token) {
-			return false
-		}
-		try {
-			await this.get('/verify')
-			return true
-		} catch (e) {
-			if (e instanceof APIError) {
-				return false
-			}
-			throw e
-		}
-	}
-
-	async logout(): Promise<void> {
-		await this.post('/logout').catch((err) => {
-			// we don't care if logout success or not
-			console.error('Logout failed:', err)
-		})
-		this.setToken('')
-	}
-
-	async getConfig(): Promise<Config> {
-		const res = await this.get<ConfigI>('/config')
-		return new Config(this, res, res.data)
-	}
-
-	async getWhitelist(): Promise<Whitelist> {
-		const res = await this.get<{
-			data: WhitelistI
-		}>('/whitelist')
-		return new Whitelist(this, res, res.data.data)
-	}
-
-	async getBlacklist(): Promise<Blacklist> {
-		const res = await this.get<{
-			data: BlacklistI
-		}>('/blacklist')
-		return new Blacklist(this, res, res.data.data)
+export class Connection {
+	readonly id: number
+	readonly addr: string
+	readonly when: Date
+	readonly player?: PlayerInfo
+	constructor(data: ConnectionI) {
+		this.id = data.id
+		this.addr = data.addr
+		this.when = new Date(data.when * 1000)
+		this.player = data.player && new PlayerInfo(data.player)
 	}
 }

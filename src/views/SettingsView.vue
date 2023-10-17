@@ -93,7 +93,7 @@ async function changepasswd(event: Event): Promise<void> {
 					/>
 				</div>
 				<div>
-					<input type="submit" value="Submit" />
+					<button type="submit">Submit</button>
 				</div>
 			</fieldset>
 		</form>
@@ -101,10 +101,6 @@ async function changepasswd(event: Event): Promise<void> {
 </template>
 
 <style scoped>
-h3 {
-	font-weight: 700;
-}
-
 form > fieldset > div {
 	margin-top: 0.3rem;
 }
@@ -114,5 +110,10 @@ form > fieldset > div > input {
 	padding: 0.5rem;
 	margin-left: 0.5rem;
 	border-radius: 1rem;
+}
+
+.changepasswd label {
+	display: inline-block;
+	width: 11rem;
 }
 </style>

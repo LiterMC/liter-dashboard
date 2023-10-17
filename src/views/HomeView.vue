@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { inject, ref, onMounted, type Ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { V1, Config, Whitelist, Blacklist } from '@/api/v1'
+import { useRequest } from 'vue-request'
+import { APIError, V1, Config, Whitelist, Blacklist, Connection } from '@/api/v1'
 import LoginComponent from '@/components/LoginComponent.vue'
 import PlayerItem from '@/components/PlayerItem.vue'
 
@@ -10,10 +11,40 @@ const router = useRouter()
 const api = inject('api') as V1
 const onlogged: Ref<(() => void) | null> = ref(null)
 
-const pending = ref(false)
+const ready = ref(false)
+const pending = ref(true)
 const whitelist: Ref<Whitelist | null> = ref(null)
 const blacklist: Ref<Blacklist | null> = ref(null)
 const config: Ref<Config | null> = ref(null)
+const { data: connections, error: connPollError } = (() => {
+	const pollInterval = 500
+	const maxRetryInterval = 60 * 1000 // a minute
+	const pollingInterval = ref(pollInterval)
+	return useRequest(
+		() =>
+			api.getConnections().catch((e) => {
+				if (e instanceof APIError) {
+					if (e.type === 'AuthError') {
+						ready.value = false
+						login().then(() => {
+							ready.value = true
+						})
+					}
+				}
+				throw e
+			}),
+		{
+			ready: ready,
+			pollingInterval: pollingInterval,
+			onSuccess() {
+				pollingInterval.value = pollInterval
+			},
+			onError() {
+				pollingInterval.value = Math.min(pollingInterval.value * 2, maxRetryInterval)
+			}
+		}
+	)
+})()
 
 function alert(msg: any) {
 	window.alert(String(msg))
@@ -77,24 +108,41 @@ async function refresh(): Promise<void> {
 	}
 }
 
+var loginPromise: Promise<void> | null = null
+
+function login(): Promise<void> {
+	if (loginPromise) {
+		return loginPromise
+	}
+	return (loginPromise = new Promise<void>((resolve) => {
+		onlogged.value = () => {
+			onlogged.value = null
+			loginPromise = null
+			resolve()
+		}
+	}))
+}
+
 async function verifyOrLogin(): Promise<void> {
 	if (!(await api.verify())) {
-		await new Promise<void>((resolve) => {
-			onlogged.value = () => {
-				resolve()
-				onlogged.value = null
-			}
-		})
+		await login()
 	}
-	api.getConfig().then((v) => {
-		config.value = v
-	})
-	api.getWhitelist().then((v) => {
-		whitelist.value = v
-	})
-	api.getBlacklist().then((v) => {
-		blacklist.value = v
-	})
+	ready.value = true
+	try {
+		await Promise.all([
+			api.getConfig().then((v) => {
+				config.value = v
+			}),
+			api.getWhitelist().then((v) => {
+				whitelist.value = v
+			}),
+			api.getBlacklist().then((v) => {
+				blacklist.value = v
+			})
+		])
+	} finally {
+		pending.value = false
+	}
 }
 
 onMounted(async () => {
@@ -114,7 +162,7 @@ onMounted(async () => {
 			</legend>
 			<div v-if="config">
 				<div>
-					<b>Online Mode:&nbsp;</b>
+					<label>Online Mode:&nbsp;</label>
 					<input
 						type="checkbox"
 						:disabled="pending"
@@ -126,7 +174,7 @@ onMounted(async () => {
 					/>
 				</div>
 				<div>
-					<b>Enable Whitelist:&nbsp;</b>
+					<label>Enable Whitelist:&nbsp;</label>
 					<input
 						type="checkbox"
 						:disabled="pending"
@@ -139,7 +187,7 @@ onMounted(async () => {
 					/>
 				</div>
 				<div>
-					<b>Enable IPWhitelist:&nbsp;</b>
+					<label>Enable IPWhitelist:&nbsp;</label>
 					<input
 						type="checkbox"
 						:disabled="pending"
@@ -156,6 +204,24 @@ onMounted(async () => {
 				</div>
 			</div>
 			<div v-else>Loading...</div>
+		</fieldset>
+		<fieldset class="connections config-box">
+			<legend class="config-box-title">
+				<h3>Connections</h3>
+			</legend>
+			<div v-if="connections">
+				<div v-if="!connPollError" class="error">{{ connPollError }}Error: test</div>
+				<div>Count: {{ connections.length }}</div>
+				<div v-for="conn in connections" :key="conn.id">
+					<hr />
+					<div><b>ID:&nbsp;</b>{{ conn.id }}</div>
+					<div><b>When:&nbsp;</b> {{ conn.when.toString() }}</div>
+					<PlayerItem v-if="conn.player" :name="conn.player.name" :id="conn.player.id" />
+				</div>
+			</div>
+			<div v-else>
+				<i><b>Loading...</b></i>
+			</div>
 		</fieldset>
 		<fieldset class="whitelist config-box">
 			<legend class="config-box-title">
@@ -183,7 +249,7 @@ onMounted(async () => {
 								placeholder="Player name or UUID"
 								autocomplete="off"
 							/>
-							<input type="submit" value="Add" />
+							<button type="submit" class="submit-player">ADD</button>
 						</form>
 					</div>
 				</fieldset>
@@ -218,7 +284,7 @@ onMounted(async () => {
 								placeholder="Player name or UUID"
 								autocomplete="off"
 							/>
-							<input type="submit" value="Add" />
+							<button type="submit" class="submit-player">ADD</button>
 						</form>
 					</div>
 				</fieldset>
@@ -264,6 +330,15 @@ onMounted(async () => {
 	width: 41rem;
 }
 
+.error {
+	padding: 1rem;
+	border-radius: 1rem;
+	border: 0.25rem solid #ff0000;
+	color: #ca0000;
+	font-weight: 800;
+	background-color: #ffd8e0;
+}
+
 .sub-config-box {
 	padding-right: 0;
 	border: none;
@@ -281,7 +356,7 @@ onMounted(async () => {
 	margin-top: 0.5rem;
 }
 
-.form-add-player input {
+.form-add-player * {
 	font-size: 0.8rem;
 	font-weight: 600;
 	font-family: Minecraftia, monospace;
@@ -299,12 +374,13 @@ onMounted(async () => {
 	outline: none;
 }
 
-.form-add-player > input[type='submit'] {
+.submit-player {
 	margin-left: 1rem;
 	height: 2rem;
 	width: 7rem;
 	background: #77fb43;
 	cursor: pointer;
+	font-size: 1rem;
 }
 
 .login-pop {

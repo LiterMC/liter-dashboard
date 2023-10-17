@@ -81,7 +81,7 @@ async function login(): Promise<void> {
 				/>
 			</div>
 			<div>
-				<input type="submit" value="Login" />
+				<button type="submit">Login</button>
 			</div>
 		</form>
 	</div>
