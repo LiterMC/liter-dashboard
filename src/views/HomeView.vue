@@ -3,6 +3,7 @@ import { inject, ref, onMounted, type Ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRequest } from 'vue-request'
 import { APIError, V1, Config, Whitelist, Blacklist, Connection } from '@/api/v1'
+import RefreshIcon from '@/icons/RefreshIcon.vue'
 import LoginComponent from '@/components/LoginComponent.vue'
 import PlayerItem from '@/components/PlayerItem.vue'
 
@@ -17,8 +18,8 @@ const whitelist: Ref<Whitelist | null> = ref(null)
 const blacklist: Ref<Blacklist | null> = ref(null)
 const config: Ref<Config | null> = ref(null)
 const { data: connections, error: connPollError } = (() => {
-	const pollInterval = 500
-	const maxRetryInterval = 60 * 1000 // a minute
+	const pollInterval = 3000 // 3s
+	const maxRetryInterval = 3 * 60 * 1000 // 3min
 	const pollingInterval = ref(pollInterval)
 	return useRequest(
 		() =>
@@ -145,6 +146,15 @@ async function verifyOrLogin(): Promise<void> {
 	}
 }
 
+function formatDate(date: Date): string {
+	const month = date.getMonth().toString().padStart(2, '0')
+	const day = date.getDay().toString().padStart(2, '0')
+	const hour = date.getHours().toString().padStart(2, '0')
+	const minute = date.getMinutes().toString().padStart(2, '0')
+	const second = date.getSeconds().toString().padStart(2, '0')
+	return `${date.getFullYear()}-${month}-${day} ${hour}:${minute}:${second}`
+}
+
 onMounted(async () => {
 	verifyOrLogin()
 })
@@ -152,10 +162,15 @@ onMounted(async () => {
 
 <template>
 	<main>
-		<h1>Dashboard</h1>
-		<div>
-			<button :disabled="pending" @click="pend() && refresh()">Refresh</button>
-		</div>
+		<h1>
+			Dashboard
+			<RefreshIcon
+				class="refresh-btn"
+				:spin="pending"
+				:disabled="pending"
+				@click="!pending && pend() && refresh()"
+				/>
+		</h1>
 		<fieldset class="config config-box">
 			<legend class="config-box-title">
 				<h3>Config</h3>
@@ -209,16 +224,26 @@ onMounted(async () => {
 			<legend class="config-box-title">
 				<h3>Connections</h3>
 			</legend>
-			<div v-if="connections">
-				<div v-if="!connPollError" class="error">{{ connPollError }}Error: test</div>
-				<div>Count: {{ connections.length }}</div>
-				<div v-for="conn in connections" :key="conn.id">
-					<hr />
-					<div><b>ID:&nbsp;</b>{{ conn.id }}</div>
-					<div><b>When:&nbsp;</b> {{ conn.when.toString() }}</div>
-					<PlayerItem v-if="conn.player" :name="conn.player.name" :id="conn.player.id" />
+			<div v-if="connPollError" class="error">{{ connPollError }}</div>
+			<fieldset v-else-if="connections" class="sub-config-box">
+				<legend>
+					<span style="font-size: 0.8rem">
+						count = {{ connections.length }}
+					</span>
+				</legend>
+				<div class="connection-list">
+					<div v-for="conn in connections" :key="conn.id">
+						<hr />
+						<div>
+							<b>ID:</b>
+							{{ conn.id }}
+							&nbsp;(<i>{{ conn.addr }}</i>)
+						</div>
+						<div><b>When:&nbsp;</b> {{ formatDate(conn.when) }}</div>
+						<PlayerItem v-if="conn.player" :name="conn.player.name" :id="conn.player.id" />
+					</div>
 				</div>
-			</div>
+			</fieldset>
 			<div v-else>
 				<i><b>Loading...</b></i>
 			</div>
@@ -305,6 +330,7 @@ onMounted(async () => {
 
 <style scoped>
 .config-box {
+	width: 41rem;
 	margin: 1rem 0;
 	padding: 1rem;
 	border-right: none;
@@ -324,12 +350,6 @@ onMounted(async () => {
 	font-family: Minecraftia, monospace;
 }
 
-.config,
-.whitelist,
-.blacklist {
-	width: 41rem;
-}
-
 .error {
 	padding: 1rem;
 	border-radius: 1rem;
@@ -344,6 +364,24 @@ onMounted(async () => {
 	border: none;
 	border-top: 0.1rem solid #000a;
 	background: inherit;
+}
+
+
+.refresh-btn {
+	width: 1.5rem;
+	height: 1.5rem;
+	color: #6a727f;
+	user-select: none;
+	cursor: pointer;
+}
+
+.refresh-btn:hover {
+	color: #000;
+}
+
+.connections {
+	max-height: 26rem;
+	overflow-y: scroll;
 }
 
 .player-list {
@@ -382,6 +420,7 @@ onMounted(async () => {
 	cursor: pointer;
 	font-size: 1rem;
 }
+
 
 .login-pop {
 	position: fixed;
