@@ -7,14 +7,18 @@ defineProps<{
 
 <template>
 	<div class="player-item">
-		<img class="player-head" :src="`/api/v1/player/${id}/head`" :alt="`Head of ${name}`" />
-		<span class="player-name">
-			{{ name }}
-		</span>
-		<span class="player-uuid">
+		<div class="item-left">
+			<img class="player-head" :src="`/api/v1/player/${id}/head`" :alt="`Head of ${name}`" />
+			<span class="player-name">
+				{{ name }}
+			</span>
+		</div>
+		<div class="player-uuid">
 			{{ id }}
-		</span>
-		<slot />
+		</div>
+		<div class="item-ext">
+			<slot />
+		</div>
 	</div>
 </template>
 
@@ -26,6 +30,13 @@ defineProps<{
 	height: 2rem;
 	font-size: 1rem;
 	font-family: monospace;
+}
+
+.item-left {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	height: 100%;
 }
 
 .player-head {
@@ -53,5 +64,14 @@ defineProps<{
 .player-name,
 .player-uuid {
 	user-select: all;
+}
+
+@media(max-width: 45rem) {
+	.player-item {
+		justify-content: space-between;
+	}
+	.player-uuid {
+		display: none;
+	}
 }
 </style>

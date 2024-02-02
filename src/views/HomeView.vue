@@ -389,6 +389,9 @@ onMounted(async () => {
 }
 
 .form-add-player {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
 	margin-top: 0.5rem;
 }
 
@@ -438,5 +441,15 @@ onMounted(async () => {
 	border-radius: 1rem;
 	background: #eee;
 	box-shadow: 0 0 2px #000a;
+}
+
+@media(max-width: 45rem) {
+	.config-box {
+		max-width: calc(100% - 1rem);
+	}
+	.input-player {
+		height: 2rem;
+		width: calc(100% - 8rem);
+	}
 }
 </style>
