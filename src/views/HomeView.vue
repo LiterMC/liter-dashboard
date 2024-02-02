@@ -169,7 +169,7 @@ onMounted(async () => {
 				:spin="pending"
 				:disabled="pending"
 				@click="!pending && pend() && refresh()"
-				/>
+			/>
 		</h1>
 		<fieldset class="config config-box">
 			<legend class="config-box-title">
@@ -227,9 +227,7 @@ onMounted(async () => {
 			<div v-if="connPollError" class="error">{{ connPollError }}</div>
 			<fieldset v-else-if="connections" class="sub-config-box">
 				<legend>
-					<span style="font-size: 0.8rem">
-						count = {{ connections.length }}
-					</span>
+					<span style="font-size: 0.8rem"> count = {{ connections.length }} </span>
 				</legend>
 				<div class="connection-list">
 					<div v-for="conn in connections" :key="conn.id">
@@ -237,7 +235,8 @@ onMounted(async () => {
 						<div>
 							<b>ID:</b>
 							{{ conn.id }}
-							&nbsp;(<i>{{ conn.addr }}</i>)
+							&nbsp;(<i>{{ conn.addr }}</i
+							>)
 						</div>
 						<div><b>When:&nbsp;</b> {{ formatDate(conn.when) }}</div>
 						<PlayerItem v-if="conn.player" :name="conn.player.name" :id="conn.player.id" />
@@ -366,7 +365,6 @@ onMounted(async () => {
 	background: inherit;
 }
 
-
 .refresh-btn {
 	width: 1.5rem;
 	height: 1.5rem;
@@ -420,7 +418,6 @@ onMounted(async () => {
 	cursor: pointer;
 	font-size: 1rem;
 }
-
 
 .login-pop {
 	position: fixed;
