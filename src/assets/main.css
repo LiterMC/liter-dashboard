@@ -6,6 +6,27 @@
 	font-weight: normal;
 }
 
+/*default color*/
+:root {
+	--main-bg-color: #eee;
+	--box-shadow: #0004;
+	--refresh-btn-normal: #6a727f;
+	--refresh-btn-selected: #000;
+	--login-color: #0008;
+	--error-bg-color: #ffd8e0;
+}
+/*for different settings*/
+@media(prefers-color-scheme: dark){
+	:root {
+		--main-bg-color: #000;
+		--box-shadow: #eee4;
+		--refresh-btn-normal: #9096a0;
+		--refresh-btn-selected: #eee;
+		--login-color: #fff8;
+		--error-bg-color: #936e76;
+	}
+}
+
 @media(max-width: 45rem) {
 	#app {
 		padding: 2rem 0.5rem;

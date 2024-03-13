@@ -111,6 +111,7 @@ async function refresh(): Promise<void> {
 
 var loginPromise: Promise<void> | null = null
 
+/*whoever don't have an account butwant to check how it looks delete this function*/
 function login(): Promise<void> {
 	if (loginPromise) {
 		return loginPromise
@@ -224,7 +225,9 @@ onMounted(async () => {
 			<legend class="config-box-title">
 				<h3>Connections</h3>
 			</legend>
-			<div v-if="connPollError" class="error">{{ connPollError }}</div>
+<!-- replacement code to check whether error visual works
+<div v-if= "false||connPollError" class="error">{{ connPollError }}</div> -->
+			<div v-if= "connPollError" class="error">{{ connPollError }}</div>
 			<fieldset v-else-if="connections" class="sub-config-box">
 				<legend>
 					<span style="font-size: 0.8rem"> count = {{ connections.length }} </span>
@@ -244,7 +247,7 @@ onMounted(async () => {
 				</div>
 			</fieldset>
 			<div v-else>
-				<i><b>Loading...</b></i>
+				<!--<i><b>Loading...</b></i>-->Loading...
 			</div>
 		</fieldset>
 		<fieldset class="whitelist config-box">
@@ -279,7 +282,7 @@ onMounted(async () => {
 				</fieldset>
 			</template>
 			<div v-else>
-				<i><b>Loading...</b></i>
+				<!--<i><b>Loading...</b></i>-->Loading...
 			</div>
 		</fieldset>
 		<fieldset class="blacklist config-box">
@@ -314,7 +317,7 @@ onMounted(async () => {
 				</fieldset>
 			</template>
 			<div v-else>
-				<i><b>Loading...</b></i>
+				<!--<i><b>Loading...</b></i>-->Loading...
 			</div>
 		</fieldset>
 		<div v-if="onlogged" class="login-pop">
@@ -328,6 +331,18 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+
+@media(max-width: 45rem) {
+	.config-box {
+		max-width: calc(100% - 1rem);
+	}
+	.input-player {
+		height: 2rem;
+		width: calc(100% - 8rem);
+	}
+}
+
+/*main resources*/
 .config-box {
 	width: 41rem;
 	margin: 1rem 0;
@@ -335,8 +350,9 @@ onMounted(async () => {
 	border-right: none;
 	border-bottom: none;
 	border-radius: 0.5rem;
-	box-shadow: 0 0 1rem #0004;
-	background: #eee;
+	box-shadow: 0 0 1rem var(--box-shadow);
+	background: var(--main-bg-color);
+	font-family: Minecraftia, monospace;
 }
 
 .config-box-title > h3 {
@@ -355,26 +371,26 @@ onMounted(async () => {
 	border: 0.25rem solid #ff0000;
 	color: #ca0000;
 	font-weight: 800;
-	background-color: #ffd8e0;
+	background-color: var(--error-bg-color);
 }
 
 .sub-config-box {
 	padding-right: 0;
 	border: none;
-	border-top: 0.1rem solid #000a;
+	border-top: 0.1rem solid var(--box-shadow);
 	background: inherit;
 }
 
 .refresh-btn {
 	width: 1.5rem;
 	height: 1.5rem;
-	color: #6a727f;
+	color: var(--refresh-btn-normal);
 	user-select: none;
 	cursor: pointer;
 }
 
 .refresh-btn:hover {
-	color: #000;
+	color: var(--refresh-btn-selected);
 }
 
 .connections {
@@ -428,7 +444,7 @@ onMounted(async () => {
 	height: 100vh;
 	top: 0;
 	left: 0;
-	background: #0008;
+	background: var(--login-color);
 }
 
 .login-box {
@@ -439,17 +455,7 @@ onMounted(async () => {
 	left: 10%;
 	padding: 1rem;
 	border-radius: 1rem;
-	background: #eee;
-	box-shadow: 0 0 2px #000a;
-}
-
-@media(max-width: 45rem) {
-	.config-box {
-		max-width: calc(100% - 1rem);
-	}
-	.input-player {
-		height: 2rem;
-		width: calc(100% - 8rem);
-	}
+	box-shadow: 0 0 2px var(--box-shadow);
+	background-color: var(--main-bg-color);
 }
 </style>
