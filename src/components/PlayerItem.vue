@@ -66,7 +66,7 @@ defineProps<{
 	user-select: all;
 }
 
-@media(max-width: 45rem) {
+@media (max-width: 45rem) {
 	.player-item {
 		justify-content: space-between;
 	}

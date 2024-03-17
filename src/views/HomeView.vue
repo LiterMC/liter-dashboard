@@ -2,14 +2,21 @@
 import { inject, ref, onMounted, type Ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRequest } from 'vue-request'
-import { APIError, V1, Config, Whitelist, Blacklist, Connection } from '@/api/v1'
+import {
+	AuthError,
+	type API,
+	type Config,
+	type Whitelist,
+	type Blacklist,
+	type Connection,
+} from '@/api'
 import RefreshIcon from '@/icons/RefreshIcon.vue'
 import LoginComponent from '@/components/LoginComponent.vue'
 import PlayerItem from '@/components/PlayerItem.vue'
 
 const router = useRouter()
 
-const api = inject('api') as V1
+const api = inject('api') as API
 const onlogged: Ref<(() => void) | null> = ref(null)
 
 const ready = ref(false)
@@ -24,13 +31,11 @@ const { data: connections, error: connPollError } = (() => {
 	return useRequest(
 		() =>
 			api.getConnections().catch((e) => {
-				if (e instanceof APIError) {
-					if (e.type === 'AuthError') {
-						ready.value = false
-						login().then(() => {
-							ready.value = true
-						})
-					}
+				if (e instanceof AuthError) {
+					ready.value = false
+					login().then(() => {
+						ready.value = true
+					})
 				}
 				throw e
 			}),
@@ -42,8 +47,8 @@ const { data: connections, error: connPollError } = (() => {
 			},
 			onError() {
 				pollingInterval.value = Math.min(pollingInterval.value * 2, maxRetryInterval)
-			}
-		}
+			},
+		},
 	)
 })()
 
@@ -60,7 +65,7 @@ async function whitelistAddPlayer(event: Event): Promise<void> {
 	const target = event.target as HTMLFormElement
 	const player = target.player.value
 	try {
-		await whitelist.value.addPlayer(player)
+		await api.addWhitelistPlayer(player)
 		target.player.value = ''
 	} catch (err) {
 		alert(err)
@@ -78,7 +83,7 @@ async function blacklistAddPlayer(event: Event): Promise<void> {
 	const target = event.target as HTMLFormElement
 	const player = target.player.value
 	try {
-		await blacklist.value.addPlayer(player)
+		await api.addBlacklistPlayer(player)
 		target.player.value = ''
 	} catch (err) {
 		alert(err)
@@ -98,9 +103,15 @@ function pend(): boolean {
 async function refresh(): Promise<void> {
 	try {
 		await Promise.all([
-			config.value?.refresh(),
-			whitelist.value?.refresh(),
-			blacklist.value?.refresh()
+			api.getConfig().then((v) => {
+				config.value = v
+			}),
+			api.getWhitelist().then((v) => {
+				whitelist.value = v
+			}),
+			api.getBlacklist().then((v) => {
+				blacklist.value = v
+			}),
 		])
 	} catch (err) {
 		alert(err)
@@ -139,7 +150,7 @@ async function verifyOrLogin(): Promise<void> {
 			}),
 			api.getBlacklist().then((v) => {
 				blacklist.value = v
-			})
+			}),
 		])
 	} finally {
 		pending.value = false
@@ -184,7 +195,8 @@ onMounted(async () => {
 						:checked="config.onlineMode"
 						@click.prevent="
 							(event) =>
-								pend() && config?.set('onlineMode', !config?.onlineMode).catch(alert).then(refresh)
+								pend() &&
+								api.setConfig('onlineMode', !config?.onlineMode).catch(alert).then(refresh)
 						"
 					/>
 				</div>
@@ -197,7 +209,10 @@ onMounted(async () => {
 						@click.prevent="
 							(event) =>
 								pend() &&
-								config?.set('enableWhitelist', !config?.enableWhitelist).catch(alert).then(refresh)
+								api
+									.setConfig('enableWhitelist', !config?.enableWhitelist)
+									.catch(alert)
+									.then(refresh)
 						"
 					/>
 				</div>
@@ -210,8 +225,8 @@ onMounted(async () => {
 						@click.prevent="
 							(event) =>
 								pend() &&
-								config
-									?.set('enableIPWhitelist', !config?.enableIPWhitelist)
+								api
+									.setConfig('enableIPWhitelist', !config?.enableIPWhitelist)
 									.catch(alert)
 									.then(refresh)
 						"
@@ -261,7 +276,7 @@ onMounted(async () => {
 					</legend>
 					<div class="player-list">
 						<PlayerItem v-for="(p, i) in whitelist.players" :key="p.id" :name="p.name" :id="p.id">
-							<button @click="pend() && whitelist.removePlayer(i).catch(alert).then(refresh)">
+							<button @click="pend() && api.removeWhitelistPlayer(i).catch(alert).then(refresh)">
 								-
 							</button>
 						</PlayerItem>
@@ -296,7 +311,7 @@ onMounted(async () => {
 					</legend>
 					<div class="player-list">
 						<PlayerItem v-for="(p, i) in blacklist.players" :key="p.id" :name="p.name" :id="p.id">
-							<button @click="pend() && blacklist.removePlayer(i).catch(alert).then(refresh)">
+							<button @click="pend() && api.removeBlacklistPlayer(i).catch(alert).then(refresh)">
 								-
 							</button>
 						</PlayerItem>
@@ -443,7 +458,7 @@ onMounted(async () => {
 	box-shadow: 0 0 2px #000a;
 }
 
-@media(max-width: 45rem) {
+@media (max-width: 45rem) {
 	.config-box {
 		max-width: calc(100% - 1rem);
 	}

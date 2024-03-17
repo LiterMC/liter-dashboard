@@ -3,12 +3,12 @@ import { inject, type Ref } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { sha256 } from 'js-sha256'
-import { V1, APIError } from '@/api/v1'
+import { APIError, type API } from '@/api'
 
 const router = useRouter()
 
 const token = inject('token') as Ref<string | null>
-const api = inject('api') as V1
+const api = inject('api') as API
 
 async function changepasswd(event: Event): Promise<void> {
 	const target = event.target as HTMLFormElement
@@ -27,22 +27,12 @@ async function changepasswd(event: Event): Promise<void> {
 		alert('password not match')
 		return
 	}
-	const res = await api
-		.post(`/changepasswd`, {
-			oldPassword: sha256(oldpasswd),
-			newPassword: sha256(newpasswd)
-		})
-		.catch((err) => {
-			if (err instanceof APIError) {
-				alert(`LoginError: ${err.type}: ${err.msg}`)
-				return null
-			}
-			throw err
-		})
-	if (!res) {
+	try {
+		await api.changePassword(oldpasswd, newpasswd).then(api.logout)
+	} catch (err) {
+		alert(String(err))
 		return
 	}
-	await api.logout()
 	alert('Password changed success, please login again')
 	router.push({ name: 'login' })
 }

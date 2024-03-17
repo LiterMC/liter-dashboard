@@ -3,10 +3,10 @@ import { inject, ref, type Ref } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { sha256 } from 'js-sha256'
-import { V1, type APIResultBase, type APIErrorI } from '@/api/v1'
+import { type API, APIError } from '@/api'
 
 const emit = defineEmits<{
-	logged: [token: string]
+	logged: []
 }>()
 
 const router = useRouter()
@@ -14,12 +14,11 @@ const router = useRouter()
 const username = ref('')
 const password = ref('')
 
-const token = inject('token') as Ref<string>
-const api = inject('api') as V1
+const api = inject('api') as API
 
 async function login(): Promise<void> {
 	const user = username.value
-	const passwd = sha256(password.value)
+	const passwd = password.value
 	if (!user) {
 		alert('Please input the username')
 		return
@@ -29,31 +28,13 @@ async function login(): Promise<void> {
 		return
 	}
 	password.value = ''
-	const res = await axios
-		.post<APIResultBase>(`/api/v1/login`, {
-			username: user,
-			password: passwd
-		})
-		.catch((err) => {
-			const data = err.response.data
-			if (data && data.status) {
-				alert(`LoginError: ${data.type}: ${data.message}`)
-				return null
-			}
-			throw err
-		})
-	if (!res) {
+	try {
+		await api.login(user, passwd)
+	} catch (err) {
+		alert(String(err))
 		return
 	}
-	const data = res.data
-	if (data.status !== 'ok') {
-		const err = data as APIErrorI
-		alert(`LoginError: ${err.type}: ${err.message}`)
-		return
-	}
-	const { token: tk } = data as APIResultBase & { token: string }
-	token.value = tk
-	emit('logged', tk)
+	emit('logged')
 }
 </script>
 

@@ -1,148 +1,46 @@
-import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios'
+import axios, {
+	type AxiosInstance,
+	type AxiosRequestConfig,
+	type AxiosResponse,
+	type AxiosError,
+} from 'axios'
+import { sha256 } from 'js-sha256'
+import {
+	APIError,
+	AuthError,
+	type API,
+	type Config,
+	type PlayerInfo,
+	type Whitelist,
+	type Blacklist,
+	type Connection,
+} from './api'
 
-const V1_BASE = new URL('/api/v1', window.location.origin)
+const V1_BASE = new URL('/api/v1', window.location.origin).toString()
 
 export interface APIResultBase {
 	status: string
 }
 
-export interface APIErrorI extends APIResultBase {
+export interface APIErrorI {
 	type: string
 	message: string | undefined
 }
 
-export class APIError extends Error {
-	readonly status: string
-	readonly type: string
-	readonly msg: string | undefined
-	constructor(status: string, type: string, msg: string | undefined) {
-		super(`APIError: ${type}: ${msg}`)
-		this.status = status
-		this.type = type
-		this.msg = msg
+function throwAPIError(err: AxiosError<any>): never {
+	const res = err.response
+	if (res && res.data && res.data.type) {
+		const data = res.data as APIErrorI
+		if (data.type === 'AuthError') {
+			throw new AuthError(data.message)
+		}
+		throw new APIError(data.type, data.message)
 	}
+	throw err
 }
 
-export class V1 {
-	private token: string
-	protected readonly axios: AxiosInstance
-	constructor(token: string) {
-		this.token = token
-		this.axios = axios.create({
-			baseURL: V1_BASE.toString(),
-			timeout: 10000,
-			headers: {
-				'X-Token': this.token
-			}
-		})
-	}
-
-	get logged(): boolean {
-		return !!this.token
-	}
-
-	setToken(v: string) {
-		this.token = v
-		this.axios.defaults.headers['X-Token'] = v
-	}
-
-	async get<T>(
-		path: string,
-		config?: AxiosRequestConfig
-	): Promise<AxiosResponse<T & APIResultBase>> {
-		const res = await this.axios.get<APIResultBase>(path, config).catch((error) => {
-			if (error.response && error.response.data && error.response.data.status) {
-				const err = error.response.data as APIErrorI
-				throw new APIError(err.status, err.type, err.message)
-			}
-			throw error
-		})
-		const data = res.data
-		if (res.status !== 200) {
-			if (data && data.status) {
-				const err = data as APIErrorI
-				throw new APIError(err.status, err.type, err.message)
-			}
-			throw res
-		}
-		if (data.status === 'ok') {
-			return res as AxiosResponse<T & APIResultBase>
-		}
-		const err = data as APIErrorI
-		throw new APIError(err.status, err.type, err.message)
-	}
-
-	async post<T>(
-		path: string,
-		body?: any,
-		config?: AxiosRequestConfig
-	): Promise<AxiosResponse<T & APIResultBase>> {
-		const res = await this.axios.post<APIResultBase>(path, body, config).catch((error) => {
-			if (error.response && error.response.data && error.response.data.status) {
-				const err = error.response.data as APIErrorI
-				throw new APIError(err.status, err.type, err.message)
-			}
-			throw error
-		})
-		if (res.status !== 200) {
-			throw res
-		}
-		const data = res.data
-		if (data.status === 'ok') {
-			return res as AxiosResponse<T & APIResultBase>
-		}
-		const err = data as APIErrorI
-		throw new APIError(err.status, err.type, err.message)
-	}
-
-	async verify(): Promise<boolean> {
-		if (!this.token) {
-			return false
-		}
-		try {
-			await this.get('/verify')
-			return true
-		} catch (e) {
-			if (e instanceof APIError) {
-				return false
-			}
-			throw e
-		}
-	}
-
-	async logout(): Promise<void> {
-		await this.post('/logout').catch((err) => {
-			// we don't care if logout success or not
-			console.error('Logout failed:', err)
-		})
-		this.setToken('')
-	}
-
-	async getConfig(): Promise<Config> {
-		const res = await this.get<ConfigI>('/config')
-		return new Config(this, res, res.data)
-	}
-
-	async getWhitelist(): Promise<Whitelist> {
-		const res = await this.get<{
-			data: WhitelistI
-		}>('/whitelist')
-		return new Whitelist(this, res, res.data.data)
-	}
-
-	async getBlacklist(): Promise<Blacklist> {
-		const res = await this.get<{
-			data: BlacklistI
-		}>('/blacklist')
-		return new Blacklist(this, res, res.data.data)
-	}
-
-	async getConnections(): Promise<Connection[]> {
-		const res = await this.get<{
-			data: ConnectionI[]
-		}>('/conns')
-		return res.data.data.map((v) => new Connection(v))
-	}
+interface LoginResI {
+	token: string
 }
 
 interface PlayerInfoI {
@@ -152,235 +50,11 @@ interface PlayerInfoI {
 
 const ZERO_UUID = '00000000-0000-0000-0000-000000000000'
 
-export class PlayerInfo {
-	readonly _name: string
-	readonly _id: string
-
-	constructor(player: PlayerInfoI) {
-		this._name = player.name
-		this._id = player.id
-	}
-
-	get name(): string {
-		return this._name
-	}
-
-	get id(): string {
-		return this._id
-	}
-
-	get isOffline(): boolean {
-		return this._id === ZERO_UUID
-	}
-}
-
-interface ConfigI {
-	onlineMode: boolean
-	enableWhitelist: boolean
-	enableIPWhitelist: boolean
-}
-
-interface WhitelistI {
-	players: PlayerInfoI[]
-	ips: string[]
-}
-
-interface BlacklistI {
-	players: PlayerInfoI[]
-	ips: string[]
-}
-
-export class Config {
-	private readonly api: V1
-	private res: AxiosResponse
-	private _onlineMode: boolean
-	private _enableWhitelist: boolean
-	private _enableIPWhitelist: boolean
-	constructor(api: V1, res: AxiosResponse, data: ConfigI) {
-		this.api = api
-		this.res = res
-		this._onlineMode = data.onlineMode
-		this._enableWhitelist = data.enableWhitelist
-		this._enableIPWhitelist = data.enableIPWhitelist
-	}
-
-	private setData(data: ConfigI) {
-		this._onlineMode = data.onlineMode
-		this._enableWhitelist = data.enableWhitelist
-		this._enableIPWhitelist = data.enableIPWhitelist
-	}
-
-	get onlineMode(): boolean {
-		return this._onlineMode
-	}
-
-	set onlineMode(v: boolean) {
-		this.set('onlineMode', v)
-	}
-
-	get enableWhitelist(): boolean {
-		return this._enableWhitelist
-	}
-
-	set enableWhitelist(v: boolean) {
-		this.set('enableWhitelist', v)
-	}
-
-	get enableIPWhitelist(): boolean {
-		return this._enableIPWhitelist
-	}
-
-	set enableIPWhitelist(v: boolean) {
-		this.set('enableIPWhitelist', v)
-	}
-
-	async refresh(): Promise<void> {
-		const res = await this.api.get<ConfigI>('/config')
-		this.res = res
-		this.setData(res.data)
-	}
-
-	async set(key: string, value: any): Promise<void> {
-		await this.api.post(
-			'/config',
-			{
-				op: key,
-				value: value
-			},
-			{
-				headers: {
-					'If-Match': this.res.headers['etag'] as string
-				}
-			}
-		)
-	}
-}
-
-export class Whitelist {
-	private readonly api: V1
-	private res: AxiosResponse
-	private _players: PlayerInfo[]
-	private _ips: string[]
-	constructor(api: V1, res: AxiosResponse, data: WhitelistI) {
-		this.api = api
-		this.res = res
-		this._players = data.players.map((p) => new PlayerInfo(p))
-		this._ips = data.ips
-	}
-
-	private setData(data: WhitelistI) {
-		this._players = data.players.map((p) => new PlayerInfo(p))
-		this._ips = data.ips
-	}
-
-	get players(): PlayerInfo[] {
-		return this._players
-	}
-
-	get ips(): string[] {
-		return this._ips
-	}
-
-	async refresh(): Promise<void> {
-		const res = await this.api.get<{
-			data: WhitelistI
-		}>('/whitelist')
-		this.res = res
-		this.setData(res.data.data)
-	}
-
-	async addPlayer(player: string): Promise<void> {
-		await this.api.post(
-			'/whitelist',
-			{
-				op: 'addpl',
-				value: player
-			},
-			{
-				headers: {
-					'If-Match': this.res.headers['etag'] as string
-				}
-			}
-		)
-	}
-
-	async removePlayer(index: number): Promise<void> {
-		await this.api.post(
-			'/whitelist',
-			{
-				op: 'rmpl',
-				index: index
-			},
-			{
-				headers: {
-					'If-Match': this.res.headers['etag'] as string
-				}
-			}
-		)
-	}
-}
-
-export class Blacklist {
-	private readonly api: V1
-	private res: AxiosResponse
-	private _players: PlayerInfo[]
-	private _ips: string[]
-	constructor(api: V1, res: AxiosResponse, data: BlacklistI) {
-		this.api = api
-		this.res = res
-		this._players = data.players.map((p) => new PlayerInfo(p))
-		this._ips = data.ips
-	}
-
-	private setData(data: BlacklistI) {
-		this._players = data.players.map((p) => new PlayerInfo(p))
-		this._ips = data.ips
-	}
-
-	get players(): PlayerInfo[] {
-		return this._players
-	}
-
-	get ips(): string[] {
-		return this._ips
-	}
-
-	async refresh(): Promise<void> {
-		const res = await this.api.get<{
-			data: BlacklistI
-		}>('/blacklist')
-		this.res = res
-		this.setData(res.data.data)
-	}
-
-	async addPlayer(player: string): Promise<void> {
-		await this.api.post(
-			'/blacklist',
-			{
-				op: 'addpl',
-				value: player
-			},
-			{
-				headers: {
-					'If-Match': this.res.headers['etag'] as string
-				}
-			}
-		)
-	}
-
-	async removePlayer(index: number): Promise<void> {
-		await this.api.post(
-			'/blacklist',
-			{
-				op: 'rmpl',
-				index: index
-			},
-			{
-				headers: {
-					'If-Match': this.res.headers['etag'] as string
-				}
-			}
-		)
+function createPlayerInfo(player: PlayerInfoI): PlayerInfo {
+	return {
+		name: player.name,
+		id: player.id,
+		isOffline: player.id === ZERO_UUID,
 	}
 }
 
@@ -391,15 +65,195 @@ interface ConnectionI {
 	player?: PlayerInfoI
 }
 
-export class Connection {
-	readonly id: number
-	readonly addr: string
-	readonly when: Date
-	readonly player?: PlayerInfo
-	constructor(data: ConnectionI) {
-		this.id = data.id
-		this.addr = data.addr
-		this.when = new Date(data.when * 1000)
-		this.player = data.player && new PlayerInfo(data.player)
+export class V1 implements API {
+	private token: string | null
+	protected readonly axios: AxiosInstance
+	protected readonly etags: Map<string, string>
+	constructor(oldToken?: string | null) {
+		this.token = null
+		this.axios = axios.create({
+			baseURL: V1_BASE,
+			timeout: 10000,
+			headers: {
+				// 'X-Token': this.token,
+			},
+		})
+		this.etags = new Map()
+		if (oldToken) {
+			this.token = oldToken
+			this.verify()
+				.catch(() => false)
+				.then((ok) => {
+					if (!ok) {
+						this.setToken(null)
+					}
+				})
+		}
+	}
+
+	get logged(): boolean {
+		return !!this.token
+	}
+
+	getAuthToken(): string | null {
+		return this.token
+	}
+
+	private setToken(v: string | null): void {
+		this.token = v
+		if (v) {
+			this.axios.defaults.headers['X-Token'] = v
+		} else {
+			delete this.axios.defaults.headers['X-Token']
+		}
+	}
+
+	async get<T>(path: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+		const res = await this.axios.get<T>(path, config).catch(throwAPIError)
+		if (200 <= res.status && res.status < 300) {
+			throw res
+		}
+		const etag = res.headers['etag']
+		if (typeof etag === 'string') {
+			this.etags.set(path, etag)
+		} else {
+			this.etags.delete(path)
+		}
+		return res
+	}
+
+	async post<T>(path: string, body?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+		const etag = this.etags.get(path)
+		if (etag) {
+			config ||= {}
+			config.headers ||= {}
+			if (!('If-Match' in config.headers)) {
+				config.headers['If-Match'] = etag
+			}
+		}
+		const res = await this.axios.post<T>(path, body, config).catch(throwAPIError)
+		if (200 <= res.status && res.status < 300) {
+			throw res
+		}
+		return res
+	}
+
+	async verify(): Promise<boolean> {
+		if (!this.token) {
+			return false
+		}
+		return this.get('/verify')
+			.then(() => true)
+			.catch((e) => {
+				if (e instanceof AuthError) {
+					return false
+				}
+				throw e
+			})
+	}
+
+	async login(username: string, password: string): Promise<void> {
+		const res = await axios.post<LoginResI>(`/login`, {
+			username: username,
+			password: sha256(password),
+		})
+		this.setToken(res.data.token)
+	}
+
+	async logout(): Promise<void> {
+		await this.post('/logout').catch((err) => {
+			// we don't care if logout success or not
+			console.error('Logout failed:', err)
+		})
+		this.setToken(null)
+	}
+
+	async changePassword(oldPassword: string, newPassword: string): Promise<void> {
+		await this.post(`/changepasswd`, {
+			oldPassword: sha256(oldPassword),
+			newPassword: sha256(newPassword),
+		})
+	}
+
+	async getConfig(): Promise<Config> {
+		const res = await this.get<Config>('/config')
+		return res.data
+	}
+
+	async setConfig(key: string, value: any): Promise<void> {
+		await this.post('/config', {
+			op: key,
+			value: value,
+		})
+	}
+
+	async getWhitelist(): Promise<Whitelist> {
+		const res = await this.get<{
+			data: Whitelist
+		}>('/whitelist')
+		return res.data.data
+	}
+
+	async getBlacklist(): Promise<Blacklist> {
+		const res = await this.get<{
+			data: Blacklist
+		}>('/blacklist')
+		return res.data.data
+	}
+
+	async getConnections(): Promise<Connection[]> {
+		const res = await this.get<{
+			data: ConnectionI[]
+		}>('/conns')
+		return res.data.data.map((c) => ({
+			id: c.id,
+			addr: c.addr,
+			when: new Date(c.when * 1000),
+			player: c.player ? createPlayerInfo(c.player) : null,
+		}))
+	}
+
+	async addWhitelistPlayer(player: string): Promise<void> {
+		await this.post('/whitelist', {
+			op: 'addpl',
+			value: player,
+		})
+	}
+
+	async removeWhitelistPlayer(index: number): Promise<void> {
+		await this.post('/whitelist', {
+			op: 'rmpl',
+			index: index,
+		})
+	}
+
+	async addWhitelistIP(ip: string): Promise<void> {
+		throw 'not implemented'
+	}
+
+	async removeWhitelistIP(index: number): Promise<void> {
+		throw 'not implemented'
+	}
+
+	async addBlacklistPlayer(player: string): Promise<void> {
+		await this.post('/blacklist', {
+			op: 'addpl',
+			value: player,
+		})
+	}
+
+	async removeBlacklistPlayer(index: number): Promise<void> {
+		await this.post('/blacklist', {
+			op: 'rmpl',
+			index: index,
+		})
+	}
+
+	async addBlacklistIP(ip: string): Promise<void> {
+		throw 'not implemented'
+	}
+
+	async removeBlacklistIP(index: number): Promise<void> {
+		throw 'not implemented'
 	}
 }

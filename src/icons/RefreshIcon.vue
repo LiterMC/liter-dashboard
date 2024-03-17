@@ -31,7 +31,7 @@ watch(
 				}, spinInterval)
 			}
 		}
-	}
+	},
 )
 </script>
 <template>
