@@ -110,7 +110,7 @@ export class V1 implements API {
 
 	async get<T>(path: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
 		const res = await this.axios.get<T>(path, config).catch(throwAPIError)
-		if (200 <= res.status && res.status < 300) {
+		if (res.status < 200 || 300 <= res.status) {
 			throw res
 		}
 		const etag = res.headers['etag']
@@ -132,7 +132,7 @@ export class V1 implements API {
 			}
 		}
 		const res = await this.axios.post<T>(path, body, config).catch(throwAPIError)
-		if (200 <= res.status && res.status < 300) {
+		if (res.status < 200 || 300 <= res.status) {
 			throw res
 		}
 		return res
@@ -153,7 +153,7 @@ export class V1 implements API {
 	}
 
 	async login(username: string, password: string): Promise<void> {
-		const res = await axios.post<LoginResI>(`/login`, {
+		const res = await this.post<LoginResI>(`/login`, {
 			username: username,
 			password: sha256(password),
 		})

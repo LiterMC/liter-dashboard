@@ -31,6 +31,7 @@ async function login(): Promise<void> {
 	try {
 		await api.login(user, passwd)
 	} catch (err) {
+		console.error(err)
 		alert(String(err))
 		return
 	}

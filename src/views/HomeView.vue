@@ -68,7 +68,7 @@ async function whitelistAddPlayer(event: Event): Promise<void> {
 		await api.addWhitelistPlayer(player)
 		target.player.value = ''
 	} catch (err) {
-		alert(err)
+		alert(String(err))
 	} finally {
 		refresh()
 	}
@@ -86,7 +86,7 @@ async function blacklistAddPlayer(event: Event): Promise<void> {
 		await api.addBlacklistPlayer(player)
 		target.player.value = ''
 	} catch (err) {
-		alert(err)
+		alert(String(err))
 	} finally {
 		refresh()
 	}
@@ -114,7 +114,7 @@ async function refresh(): Promise<void> {
 			}),
 		])
 	} catch (err) {
-		alert(err)
+		alert(String(err))
 	} finally {
 		pending.value = false
 	}

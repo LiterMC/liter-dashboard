@@ -7,7 +7,6 @@ import { APIError, type API } from '@/api'
 
 const router = useRouter()
 
-const token = inject('token') as Ref<string | null>
 const api = inject('api') as API
 
 async function changepasswd(event: Event): Promise<void> {
